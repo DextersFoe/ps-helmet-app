@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+# Never commit patient scans, even de-identified ones
+*.stl
+*.STL
+*.obj
+*.OBJ
+*.ply
+scans/

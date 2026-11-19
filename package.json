@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "measure": "tsx scripts/measure-file.ts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p viewer",
+    "measure": "tsx scripts/measure-file.ts",
+    "build:viewer": "tsx scripts/build-viewer.ts"
   },
   "devDependencies": {
     "@types/node": "22.15.3",

@@ -14,20 +14,17 @@ export interface FamilyReportInput {
   childName: string;
   clinician: string;
   clinic: string;
-  notes: string;
   preparedOn: string;
   scans: FamilyScanRow[];
   shapePng: string; // data URL
   shapeKey: { label: string; colour: string; dashed?: boolean }[];
   viewPng: string; // data URL
-  helmet?: { cvai: number };
   fileName: string;
 }
 
 const NAVY: [number, number, number] = [62, 74, 102];
 const MUTED: [number, number, number] = [93, 103, 121];
 const INK: [number, number, number] = [31, 42, 61];
-const SAND: [number, number, number] = [232, 226, 216];
 
 const plainLevel = (level: string) =>
   ({
@@ -74,11 +71,6 @@ export function familyReport(input: FamilyReportInput): void {
     parts.push(
       `Since the first scan on ${first.date}, asymmetry has ${dc < -0.05 ? 'improved' : dc > 0.05 ? 'increased' : 'stayed about the same'}, ` +
         `from ${first.cvai.toFixed(1)}% to ${last.cvai.toFixed(1)}%, and the head has grown ${Math.abs(dh).toFixed(0)} mm around at the measured level.`,
-    );
-  }
-  if (input.helmet) {
-    parts.push(
-      `The helmet is shaped to leave space where the head is flatter, so that natural growth fills it in. Its inner shape has an asymmetry of ${input.helmet.cvai.toFixed(1)}%.`,
     );
   }
   for (const p of parts) y = text(p, M, y + 1.5, 10.5) + 1;
@@ -149,14 +141,6 @@ export function familyReport(input: FamilyReportInput): void {
   y = text('Why the head is measured again', M, y, 11.5, 'bold', INK) + 0.5;
   y = text('Repeat scans show how the head is growing and changing shape. Head size is checked first: when the head grows, there is room for the shape to improve. Each scan is measured at the same place on the head so the results can be compared fairly.', M, y, 10) + 6;
 
-  if (input.notes.trim()) {
-    const lines = doc.splitTextToSize(input.notes.trim(), CW - 10) as string[];
-    const h = 14 + lines.length * 4.6;
-    doc.setFillColor(...SAND); doc.roundedRect(M, y, CW, h, 2, 2, 'F');
-    text('Notes from your clinician', M + 5, y + 7, 11, 'bold', NAVY);
-    text(input.notes.trim(), M + 5, y + 13, 10, 'normal', INK, CW - 10);
-    y += h + 6;
-  }
   text('If you have any questions about this report, please ask your clinician at your next visit.', M, y, 10, 'normal', MUTED);
   footer(2);
 

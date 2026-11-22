@@ -249,7 +249,7 @@ function shapeLayers(forPdf = false): { layers: OutlineLayer[]; key: { label: st
   const last = list.at(-1);
   const layers: OutlineLayer[] = [];
   const key: { label: string; colour: string; dashed?: boolean }[] = [];
-  if (helmetM && (forPdf ? includeHelmetInPdf : helmetObj?.visible)) {
+  if (helmetM && !forPdf && helmetObj?.visible) {
     layers.push({ points: helmetM.outline, colour: HELMET_COLOUR, fill: 'rgba(143,166,196,0.18)' });
     key.push({ label: 'Helmet inner surface', colour: HELMET_COLOUR });
   }
@@ -260,7 +260,6 @@ function shapeLayers(forPdf = false): { layers: OutlineLayer[]; key: { label: st
   }
   return { layers, key };
 }
-let includeHelmetInPdf = true;
 
 function renderShape() {
   const { layers, key } = shapeLayers();
@@ -380,15 +379,22 @@ function viewPng(): string {
   const ctx = c.getContext('2d')!;
   ctx.fillStyle = '#f3f1ec';
   ctx.fillRect(0, 0, c.width, c.height);
+  // The family report shows the head scans only: no helmet, clearance colours or markers.
+  if (helmetObj) helmetObj.visible = false;
+  if (helmetEdges) helmetEdges.visible = false;
+  colourAttr.array.set(plain);
+  colourAttr.needsUpdate = true;
+  outlineGroup.visible = false;
+  marks.visible = false;
   renderer.render(scene, camera);
   ctx.drawImage(src, (src.width - s) / 2, (src.height - s * (800 / 880)) / 2, s, s * (800 / 880), 0, 0, 880, 800);
+  applyDisplay();
   return c.toDataURL('image/jpeg', 0.9);
 }
 $('familyPdf').onclick = () => ($<HTMLDialogElement>('dlg')).showModal();
 $<HTMLFormElement>('dlgForm').onsubmit = async (e) => {
   const submitter = (e as SubmitEvent).submitter as HTMLButtonElement | null;
   if (submitter?.value !== 'ok') return;
-  includeHelmetInPdf = !!helmetM && $<HTMLInputElement>('fHelmet').checked;
   const { layers, key } = shapeLayers(true);
   const shapePng = await svgToPng(shapeSvg(layers));
   const list = sorted();
@@ -397,13 +403,11 @@ $<HTMLFormElement>('dlgForm').onsubmit = async (e) => {
     childName: name,
     clinician: $<HTMLInputElement>('fClin').value,
     clinic: $<HTMLInputElement>('fClinic').value,
-    notes: $<HTMLTextAreaElement>('fNotes').value,
     preparedOn: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
     scans: list.map((s) => ({ date: fmtDate(s.date), cvai: s.m.cvai, cvaiLevel: s.m.cvaiGrade.level, cr: s.m.cr, crLevel: s.m.crGrade.level, circumferenceMm: s.m.headCircumferenceMm })),
     shapePng,
     shapeKey: key,
     viewPng: viewPng(),
-    ...(includeHelmetInPdf && helmetM ? { helmet: { cvai: helmetM.cvai } } : {}),
     fileName: `Head shape report${name ? ` - ${name}` : ''} - ${new Date().toISOString().slice(0, 10)}.pdf`,
   });
 };

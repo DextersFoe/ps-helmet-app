@@ -85,15 +85,15 @@ export function familyReport(input: FamilyReportInput): void {
 
   y += 5;
   y = text('Measurements', M, y, 13, 'bold', NAVY) + 2;
-  const cols = [M, M + 38, M + 90, M + 142];
+  const cols = [M, M + 34, M + 72, M + 124];
   doc.setFillColor(79, 120, 145); doc.rect(M, y - 4.5, CW, 7, 'F');
-  ['Scan date', 'Asymmetry (CVAI)', 'Width to length (CR)', 'Head size around'].forEach((h, i) => text(h, cols[i]! + 2, y, 9, 'bold', [255, 255, 255], 52));
+  ['Scan date', 'Head size around', 'Asymmetry (CVAI)', 'Width to length (CR)'].forEach((h, i) => text(h, cols[i]! + 2, y, 9, 'bold', [255, 255, 255], 52));
   y += 7;
   for (const s of input.scans) {
     text(s.date, cols[0]! + 2, y, 9.5);
-    text(`${s.cvai.toFixed(1)}%  ·  ${s.cvaiLevel}`, cols[1]! + 2, y, 9.5);
-    text(`${s.cr.toFixed(1)}%  ·  ${s.crLevel}`, cols[2]! + 2, y, 9.5);
-    text(`${s.circumferenceMm.toFixed(0)} mm`, cols[3]! + 2, y, 9.5);
+    text(`${s.circumferenceMm.toFixed(0)} mm`, cols[1]! + 2, y, 9.5);
+    text(`${s.cvai.toFixed(1)}%  ·  ${s.cvaiLevel}`, cols[2]! + 2, y, 9.5);
+    text(`${s.cr.toFixed(1)}%  ·  ${s.crLevel}`, cols[3]! + 2, y, 9.5);
     doc.setDrawColor(217, 221, 227); doc.line(M, y + 2.5, W - M, y + 2.5);
     y += 7;
   }

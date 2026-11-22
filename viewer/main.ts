@@ -239,8 +239,8 @@ function renderScans() {
   }
   const list = sorted(), first = list[0]!, last = list.at(-1)!;
   $('summary').innerHTML = list.length > 1
-    ? `<div class="summary"><b>Since ${fmtDate(first.date)}:</b> CVAI ${f1(first.m.cvai)}% → ${f1(last.m.cvai)}%, CR ${f1(first.m.cr)}% → ${f1(last.m.cr)}%,
-       circumference ${last.m.headCircumferenceMm >= first.m.headCircumferenceMm ? '+' : ''}${f1(last.m.headCircumferenceMm - first.m.headCircumferenceMm)} mm.</div>`
+    ? `<div class="summary"><b>Since ${fmtDate(first.date)}:</b> circumference ${last.m.headCircumferenceMm >= first.m.headCircumferenceMm ? '+' : ''}${f1(last.m.headCircumferenceMm - first.m.headCircumferenceMm)} mm,
+       CVAI ${f1(first.m.cvai)}% → ${f1(last.m.cvai)}%, CR ${f1(first.m.cr)}% → ${f1(last.m.cr)}%.</div>`
     : '';
 }
 
@@ -276,10 +276,10 @@ function renderMeasurements() {
     `<tr><td>${label}</td>${cols.map((c, i) => `<td>${fn(c.m, i)}</td>`).join('')}</tr>`;
   const isHelmet = (i: number) => !!helmetM && i === cols.length - 1;
   $('meas').innerHTML = `<tr><th></th>${cols.map((c) => `<th>${c.title}</th>`).join('')}</tr>` +
+    row('Circumference (mm)', (m) => f1(m.headCircumferenceMm)) +
     row('CVAI (%)', (m) => `${f1(m.cvai)}<span class="lvl">${m.cvaiGrade.level}</span>`) +
     row('CR (%)', (m) => `${f1(m.cr)}<span class="lvl">${m.crGrade.level}</span>`) +
     row('CVA (mm)', (m) => f1(m.cvaMm)) +
-    row('Circumference (mm)', (m) => f1(m.headCircumferenceMm)) +
     row('Length (mm)', (m) => f1(m.lengthMm)) +
     row('Width (mm)', (m) => f1(m.widthMm)) +
     row('Diagonal, front-left (mm)', (m) => f1(m.diagonalFrontLeftMm)) +

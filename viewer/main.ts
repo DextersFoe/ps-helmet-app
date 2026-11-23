@@ -10,7 +10,7 @@ import { measureFollowUp } from '../src/measure/followup.js';
 import type { Similarity } from '../src/align/register.js';
 import type { Vec2, Vec3 } from '../src/measure/vec.js';
 import { shapeSvg, type OutlineLayer } from './shape.js';
-import { familyReport } from './family-report.js';
+import { familyReport, type FamilyReportInput } from './family-report.js';
 
 interface Part { pos: string; idx: string }
 interface CaseData {
@@ -39,9 +39,10 @@ interface Scan {
 const CASE = (window as unknown as { CASE: CaseData }).CASE;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const f1 = (v: number) => v.toFixed(1);
-const SCAN_COLOURS = ['#c0392b', '#d98c1f', '#2e8b57', '#7b4fa0', '#1f7a8c'];
-const HELMET_COLOUR = '#2c4f8f';
-const FIRST_COLOUR = '#7d8594';
+// Printed Symmetry palette (style guide V2).
+const SCAN_COLOURS = ['#836851', '#475d63', '#473528', '#6c7a89'];
+const HELMET_COLOUR = '#475463';
+const FIRST_COLOUR = '#838484';
 
 // ---------- decoding ----------
 function decode<T extends Int16Array | Uint16Array>(b64: string, Type: { new (b: ArrayBuffer): T }): T {
@@ -62,7 +63,7 @@ function toEngineMesh(pos: Float32Array, idx: Uint16Array | Uint32Array): Mesh {
 
 // ---------- clearance colours ----------
 const STOPS: [number, number[]][] = [[-3, [178, 24, 43]], [-1, [230, 110, 80]], [0, [246, 213, 92]], [1, [214, 222, 110]], [3, [127, 191, 123]], [6, [63, 159, 181]], [10, [44, 79, 143]]];
-const NEUTRAL = [222, 214, 204];
+const NEUTRAL = [216, 210, 192];
 function colour(v: number): number[] {
   if (v <= STOPS[0]![0]) return STOPS[0]![1];
   for (let i = 1; i < STOPS.length; i++) {
@@ -76,7 +77,7 @@ function colour(v: number): number[] {
 const host = $('view');
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0xf3f1ec);
+renderer.setClearColor(0xf3f2ed);
 host.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
@@ -107,7 +108,7 @@ scene.add(headObj);
 
 let helmetObj: THREE.Mesh | null = null, helmetEdges: THREE.LineSegments | null = null, helmetM: Measurements | null = null;
 const helmetMat = new THREE.MeshStandardMaterial({
-  color: 0x8fa6c4, roughness: 0.35, metalness: 0.05, transparent: true, opacity: 0.3, side: THREE.DoubleSide,
+  color: 0x6c7a89, roughness: 0.35, metalness: 0.05, transparent: true, opacity: 0.3, side: THREE.DoubleSide,
   depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8,
 });
 let helmetMesh: Mesh | null = null;
@@ -127,7 +128,7 @@ if (CASE.helmet) {
   for (const [k, n] of seen) if (n === 1) for (const v of [Math.floor(k / 65536), k % 65536]) pts.push(hp[v * 3]!, hp[v * 3 + 1]!, hp[v * 3 + 2]!);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  helmetEdges = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x2b3550 }));
+  helmetEdges = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x475463 }));
   helmetEdges.renderOrder = 3;
   scene.add(helmetEdges);
 }
@@ -193,7 +194,7 @@ function rebuildOutlines3d() {
   if (helmetM && helmetObj?.visible) add(helmetM, HELMET_COLOUR);
   marks.clear();
   for (const p of Object.values(LM)) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0x1f2a3d, depthTest: false }));
+    const s = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0x473528, depthTest: false }));
     s.position.set(...(p as [number, number, number]));
     s.renderOrder = 6;
     marks.add(s);
@@ -254,7 +255,7 @@ function shapeLayers(forPdf = false): { layers: OutlineLayer[]; key: { label: st
   const layers: OutlineLayer[] = [];
   const key: { label: string; colour: string; dashed?: boolean }[] = [];
   if (helmetM && !forPdf && helmetObj?.visible) {
-    layers.push({ points: helmetM.outline, colour: HELMET_COLOUR, fill: 'rgba(143,166,196,0.18)' });
+    layers.push({ points: helmetM.outline, colour: HELMET_COLOUR, fill: 'rgba(108,122,137,0.14)' });
     key.push({ label: 'Helmet inner surface', colour: HELMET_COLOUR });
   }
   for (const s of list) {
@@ -387,7 +388,7 @@ function viewPng(): string {
   const c = document.createElement('canvas');
   c.width = 880; c.height = 800;
   const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#f3f1ec';
+  ctx.fillStyle = '#f3f2ed';
   ctx.fillRect(0, 0, c.width, c.height);
   // The family report shows the head scans only: no helmet, clearance colours or markers.
   if (helmetObj) helmetObj.visible = false;
@@ -418,6 +419,7 @@ $<HTMLFormElement>('dlgForm').onsubmit = async (e) => {
     shapePng,
     shapeKey: key,
     viewPng: viewPng(),
+    brand: (window as unknown as { BRAND?: FamilyReportInput['brand'] }).BRAND ?? null,
     fileName: `Head shape report${name ? ` - ${name}` : ''} - ${new Date().toISOString().slice(0, 10)}.pdf`,
   });
 };

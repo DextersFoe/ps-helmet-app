@@ -38,8 +38,8 @@ export function shapeSvg(layers: OutlineLayer[], opts: { width?: number; height?
   const X = (p: Vec2) => W / 2 - (p[0] - cx) * sc;
   const Y = (p: Vec2) => H / 2 - (p[1] - cy) * sc;
   const path = (pts: Vec2[]) => 'M' + pts.map((p) => `${X(p).toFixed(1)},${Y(p).toFixed(1)}`).join(' L') + ' Z';
-  const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="Helvetica, Arial, sans-serif" font-size="12">`];
-  out.push(`<rect width="${W}" height="${H}" fill="#faf9f6"/>`);
+  const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="Mulish, Helvetica, Arial, sans-serif" font-size="12">`];
+  out.push(`<rect width="${W}" height="${H}" fill="#f3f2ed"/>`);
   for (const l of layers) {
     out.push(`<path d="${path(l.points)}" fill="${l.fill ?? 'none'}" stroke="${l.colour}" stroke-width="${l.width ?? 1.8}"${l.dashed ? ' stroke-dasharray="5 4"' : ''}/>`);
     if (l.diagonals) {
@@ -53,10 +53,10 @@ export function shapeSvg(layers: OutlineLayer[], opts: { width?: number; height?
       }
     }
   }
-  out.push(`<text x="${W / 2}" y="16" text-anchor="middle" fill="#5d6779">Front</text>`);
-  out.push(`<text x="${W / 2}" y="${H - 6}" text-anchor="middle" fill="#5d6779">Back</text>`);
-  out.push(`<text x="8" y="${H / 2 + 4}" fill="#5d6779">Left</text>`);
-  out.push(`<text x="${W - 8}" y="${H / 2 + 4}" text-anchor="end" fill="#5d6779">Right</text>`);
+  out.push(`<text x="${W / 2}" y="16" text-anchor="middle" fill="#737373">Front</text>`);
+  out.push(`<text x="${W / 2}" y="${H - 6}" text-anchor="middle" fill="#737373">Back</text>`);
+  out.push(`<text x="8" y="${H / 2 + 4}" fill="#737373">Left</text>`);
+  out.push(`<text x="${W - 8}" y="${H / 2 + 4}" text-anchor="end" fill="#737373">Right</text>`);
   out.push('</svg>');
   return out.join('');
 }

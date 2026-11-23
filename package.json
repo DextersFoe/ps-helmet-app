@@ -6,13 +6,20 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "measure": "tsx scripts/measure-file.ts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p viewer",
+    "measure": "tsx scripts/measure-file.ts",
+    "build:viewer": "tsx scripts/build-viewer.ts"
   },
   "devDependencies": {
     "@types/node": "22.15.3",
+    "@types/three": "^0.170.0",
+    "esbuild": "^0.25.12",
     "tsx": "4.19.4",
     "typescript": "5.8.3",
     "vitest": "3.1.2"
+  },
+  "dependencies": {
+    "jspdf": "^2.5.1",
+    "three": "^0.170.0"
   }
 }

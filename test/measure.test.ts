@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { measureHead, parseStl } from '../src/measure/index.js';
+import { buildFrame, findEarTops, measureHead, parseStl, toFrame, tragionFrame } from '../src/measure/index.js';
 import type { Landmarks } from '../src/measure/frame.js';
 import { box, ellipseDiameter, ellipsePerimeter, ellipsoid, merge, toBinaryStl } from './shapes.js';
 
@@ -109,6 +109,47 @@ describe('ears are kept out of the measurement plane', () => {
   it('measures the skull, not the ears', () => {
     const k = Math.sqrt(1 - ((m.planeHeight - CZ) / C) ** 2);
     expect(m.widthMm).toBeCloseTo(2 * A * k, 0);
+  });
+});
+
+describe('measurement plane from sellion and the ear tops', () => {
+  const xs = A * atEarLevel;
+  const head = ellipsoid(A, B, C, CZ);
+  const withEars = merge(head, box([xs - 2, -12, -12], [xs + 9, 12, 30]), box([-xs - 9, -12, -12], [-xs + 2, 12, 30]));
+  const k30 = A * Math.sqrt(1 - ((30 - CZ) / C) ** 2);
+
+  it('finds both ear tops where the ears meet the scalp', () => {
+    const { earTopLeft, earTopRight } = findEarTops(withEars, landmarks());
+    expect(earTopLeft[2]).toBeCloseTo(30, 0);
+    expect(earTopRight[2]).toBeCloseTo(30, 0);
+    // On the scalp (patient's left is -x here), within the ear's front-to-back span.
+    expect(Math.abs(earTopLeft[0] + k30)).toBeLessThan(1.5);
+    expect(Math.abs(earTopRight[0] - k30)).toBeLessThan(1.5);
+    expect(Math.abs(earTopLeft[1])).toBeLessThan(12);
+  });
+
+  it('passes through sellion and the ear tops', () => {
+    const lm = { ...landmarks(), earTopLeft: [-k30, 0, 30] as [number, number, number], earTopRight: [k30, 0, 30] as [number, number, number] };
+    const f = buildFrame(lm);
+    expect(toFrame(f, lm.sellion)[2]).toBeCloseTo(0, 6);
+    expect(toFrame(f, lm.earTopLeft)[2]).toBeCloseTo(0, 6);
+    expect(toFrame(f, lm.earTopRight)[2]).toBeCloseTo(0, 6);
+    // Rises towards the back: a point behind the ears is above the tragion plane.
+    expect(f.up[1]).toBeGreaterThan(0.2);
+  });
+
+  it('stays level side to side when one ear sits higher', () => {
+    const lm = { ...landmarks(), earTopLeft: [-k30, 0, 25] as [number, number, number], earTopRight: [k30, 0, 35] as [number, number, number] };
+    const f = buildFrame(lm), t = tragionFrame(lm);
+    expect(f.left[0] * t.left[0] + f.left[1] * t.left[1] + f.left[2] * t.left[2]).toBeCloseTo(1, 6);
+    expect(toFrame(f, lm.sellion)[2]).toBeCloseTo(0, 6);
+    expect(toFrame(f, [0, 0, 30])[2]).toBeCloseTo(0, 6); // the ear-top midpoint
+  });
+
+  it('measures a symmetric head as symmetric', () => {
+    const m = measureHead(withEars, { ...landmarks(), ...findEarTops(withEars, landmarks()) });
+    expect(m.cvai).toBeLessThan(0.3);
+    expect(m.planeHeight).toBeGreaterThan(0);
   });
 });
 

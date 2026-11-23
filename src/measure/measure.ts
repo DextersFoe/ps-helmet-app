@@ -1,21 +1,22 @@
 /**
  * Head measurements as defined in the pilot spec ("Measurement definitions").
  *
- * 1. Build the head frame from sellion and both tragions.
+ * 1. Build the head frame: from sellion and both ear tops, levelled side to
+ *    side on the tragions (or from sellion and the tragions if ear tops are missing).
  * 2. Find the measurement plane: parallel to the reference plane, at the
  *    height where head circumference is largest.
  * 3. On that plane's outline: length, width, CR, the two 30-degree diagonals,
  *    CVA, CVAI and head circumference.
  * 4. Ear shift from the tragion positions.
  */
-import { type HeadFrame, type Landmarks, buildFrame, toFrame } from './frame.js';
+import { type HeadFrame, type Landmarks, buildFrame, toFrame, tragionFrame } from './frame.js';
 import { convexHull, perimeter, rayExit } from './hull.js';
 import { type CrLevel, type Graded, type Level, gradeCr, gradeCvai } from './severity.js';
 import { type FramedMesh, frameMesh, sliceSegments, slicePieces } from './slice.js';
 import type { Mesh } from './stl.js';
 import type { Vec2, Vec3 } from './vec.js';
 
-export const ENGINE_VERSION = '0.1.0';
+export const ENGINE_VERSION = '0.2.0';
 
 export interface MeasureOptions {
   /** Fixed measurement height above the reference plane, mm. Omit to search for the largest circumference. */
@@ -123,9 +124,10 @@ function findMeasurementPlane(fm: FramedMesh, opts: MeasureOptions): PlaneResult
 export function measureHead(mesh: Mesh, landmarks: Landmarks, opts: MeasureOptions = {}): Measurements {
   const frame = buildFrame(landmarks);
   const fm = frameMesh(mesh, frame);
-  // The cranial vault rises further above the ear plane than the chin and neck
+  // The cranial vault rises further above the tragion plane than the chin and neck
   // fall below it. If not, "up" is pointing down: the ears are swapped.
-  if (fm.maxUp < 40 || fm.maxUp < fm.maxDown) {
+  const check = landmarks.earTopLeft ? frameMesh(mesh, tragionFrame(landmarks)) : fm;
+  if (check.maxUp < 40 || check.maxUp < check.maxDown) {
     throw new Error(
       'Very little of the scan lies above the ear plane. Check that the left and right ear landmarks are not swapped.',
     );

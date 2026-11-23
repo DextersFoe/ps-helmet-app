@@ -1,11 +1,12 @@
 /**
  * Head shape review: the first scan with its proposed helmet, the clearance
  * heatmap, follow-up scans lined up and measured at the same level, the 2D
- * shape at the measurement level, and a plain-language PDF for the family.
+ * shape at the measurement level, a check that each scan holds enough data to
+ * make a helmet, and a plain-language PDF for the family.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { findEarTops, measureHead, parseStl, type Landmarks, type Measurements, type Mesh } from '../src/measure/index.js';
+import { checkScanQuality, findEarTops, measureHead, parseStl, type Landmarks, type Measurements, type Mesh, type QualityResult } from '../src/measure/index.js';
 import { measureFollowUp } from '../src/measure/followup.js';
 import type { Similarity } from '../src/align/register.js';
 import type { Vec2, Vec3 } from '../src/measure/vec.js';
@@ -34,6 +35,10 @@ interface Scan {
   colour: string;
   object: THREE.Mesh;
   visible: boolean;
+  /** Enough data for manufacture? Checked after loading. */
+  quality?: QualityResult;
+  /** Holes and peel drawn on the scan; a child of `object`. */
+  problems?: THREE.Group;
 }
 
 const CASE = (window as unknown as { CASE: CaseData }).CASE;
@@ -218,6 +223,44 @@ function similarityMatrix(t: Similarity) {
   );
 }
 
+// ---------- scan quality ----------
+// Magenta: stands apart from every colour in the clearance heatmap.
+const PROBLEM = 0xc2187a;
+function checkQuality(s: Scan, firstScan: boolean) {
+  s.quality = checkScanQuality(s.mesh, s.landmarks, { firstScan });
+  const g = new THREE.Group();
+  for (const loop of s.quality.holeLoops) {
+    const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop.map((p) => new THREE.Vector3(...p))),
+      new THREE.LineBasicMaterial({ color: PROBLEM, depthTest: false }));
+    line.renderOrder = 7;
+    g.add(line);
+  }
+  if (s.quality.peelTriangles.length) {
+    const t = s.mesh.triangles, pos = new Float32Array(s.quality.peelTriangles.length * 9);
+    s.quality.peelTriangles.forEach((f, i) => pos.set(t.subarray(f * 9, f * 9 + 9), i * 9));
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const peel = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: PROBLEM, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16 }));
+    peel.renderOrder = 7;
+    g.add(peel);
+  }
+  s.problems = g;
+  s.object.add(g);
+}
+
+function renderQuality() {
+  const host = $('quality');
+  host.innerHTML = sorted().map((s) => {
+    const q = s.quality;
+    if (!q) return `<div class="qcard"><div class="qhead"><span class="dot" style="background:${s.colour}"></span><b>${s.label}</b><span class="badge">Checking…</span></div></div>`;
+    const cls = q.ok ? 'pass' : q.firstScan ? 'fail' : 'flag';
+    const badge = q.ok ? 'Enough data for a helmet' : q.firstScan ? 'Rescan needed' : 'Flagged for review';
+    return `<details class="qcard" ${q.ok ? '' : 'open'}><summary class="qhead"><span class="dot" style="background:${s.colour}"></span><b>${s.label}</b><span class="badge ${cls}">${badge}</span></summary>
+      <p class="qverdict">${q.verdict}</p>
+      <ul class="checks">${q.checks.map((c) => `<li class="${c.ok ? 'ok' : 'no'}"><span>${c.ok ? '✓' : '✕'}</span><div><b>${c.title}</b><br>${c.detail}</div></li>`).join('')}</ul></details>`;
+  }).join('');
+}
+
 // ---------- panels ----------
 const fmtDate = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 const sorted = () => [...scans].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
@@ -314,6 +357,7 @@ function applyDisplay() {
   colourAttr.needsUpdate = true;
   outlineGroup.visible = $<HTMLInputElement>('tOutline').checked;
   marks.visible = $<HTMLInputElement>('tLm').checked;
+  for (const s of scans) if (s.problems) s.problems.visible = $<HTMLInputElement>('tQual').checked;
   const o = Number($<HTMLInputElement>('op').value) / 100;
   helmetMat.opacity = Math.max(o, 0.02);
   helmetMat.transparent = o <= 0.95;
@@ -323,12 +367,13 @@ function applyDisplay() {
 
 function refresh() {
   renderScans();
+  renderQuality();
   renderShape();
   renderMeasurements();
   rebuildOutlines3d();
   applyDisplay();
 }
-['tHelmet', 'tHeat', 'tOutline', 'tLm'].forEach((id) => ($(id).onchange = () => { applyDisplay(); renderShape(); rebuildOutlines3d(); applyDisplay(); }));
+['tHelmet', 'tHeat', 'tOutline', 'tLm', 'tQual'].forEach((id) => ($(id).onchange = () => { applyDisplay(); renderShape(); rebuildOutlines3d(); applyDisplay(); }));
 $('op').oninput = applyDisplay;
 if (!CASE.helmet) {
   // Assessment before any helmet is made: hide the helmet and clearance controls.
@@ -359,10 +404,15 @@ $<HTMLInputElement>('file').onchange = async (e) => {
     obj.renderOrder = 1;
     scene.add(obj);
     const n = scans.length;
-    scans.push({
+    const scan: Scan = {
       id: nextId++, label: `Follow-up ${n}`, date: new Date().toISOString().slice(0, 10), mesh, landmarks: result.landmarks,
       m: result.measurements, transform: result.transform, colour, object: obj, visible: true,
-    });
+    };
+    scans.push(scan);
+    busy(true, 'Checking the scan for holes, peel and coverage…');
+    await new Promise((r) => setTimeout(r, 50));
+    // Follow-ups are not used to make a helmet, so problems are flagged rather than requiring a rescan.
+    checkQuality(scan, false);
     if (result.medianResidualMm > 2) alert('This scan did not line up closely with the first one. Check that it is the same infant and a complete head scan.');
     refresh();
   } catch (err) {
@@ -397,6 +447,7 @@ function viewPng(): string {
   colourAttr.needsUpdate = true;
   outlineGroup.visible = false;
   marks.visible = false;
+  for (const s of scans) if (s.problems) s.problems.visible = false;
   renderer.render(scene, camera);
   ctx.drawImage(src, (src.width - s) / 2, (src.height - s * (800 / 880)) / 2, s, s * (800 / 880), 0, 0, 880, 800);
   applyDisplay();
@@ -437,6 +488,12 @@ resize();
 setView('top');
 renderClearance();
 refresh();
+// The first scan is the one a helmet is made from, so it must pass every check.
+setTimeout(() => {
+  checkQuality(scans[0]!, true);
+  renderQuality();
+  applyDisplay();
+}, 60);
 (function tick() {
   key.position.copy(camera.position);
   controls.update();
@@ -449,5 +506,6 @@ refresh();
   ready: true,
   scans: () => sorted().map((s) => ({ label: s.label, date: s.date, cvai: s.m.cvai, cr: s.m.cr, hc: s.m.headCircumferenceMm, plane: s.m.planeHeight, scale: s.transform?.scale })),
   setView,
+  quality: () => sorted().map((s) => ({ label: s.label, ok: s.quality?.ok, verdict: s.quality?.verdict, failed: s.quality?.checks.filter((c) => !c.ok).map((c) => c.id) })),
 };
 export type { Vec3 };

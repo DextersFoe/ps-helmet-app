@@ -3,3 +3,4 @@ export { buildFrame, tragionFrame, toFrame, type Landmarks, type HeadFrame } fro
 export { measureHead, distanceToSurface, ENGINE_VERSION, type Measurements, type MeasureOptions } from './measure.js';
 export { gradeCvai, gradeCr, type Level, type CrLevel } from './severity.js';
 export { findEarTops } from './ears.js';
+export { checkScanQuality, type QualityResult, type QualityCheck, type QualityOptions } from './quality.js';

@@ -63,6 +63,20 @@
   .scan input[type=date] { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; color: var(--ink); }
   .scan button { padding: 3px 10px; font-size: 12.5px; }
   .summary { background: var(--blush); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+  .qcard { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .qhead { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+  .qhead::-webkit-details-marker { display: none; }
+  .qhead .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .badge { margin-left: auto; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+  .badge.pass { background: #e3e9ea; color: var(--azure); }
+  .badge.fail { background: #f4dcd5; color: #8f3a27; }
+  .badge.flag { background: var(--blush); color: #836851; }
+  .qverdict { font-size: 13px; margin: 6px 0 4px; color: var(--ink); }
+  .checks { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .checks li { display: flex; gap: 8px; padding: 4px 0; color: var(--muted); }
+  .checks li b { color: var(--ink); font-weight: 600; }
+  .checks li > span { flex: none; width: 14px; font-weight: 700; color: var(--azure); }
+  .checks li.no > span { color: #b0503a; }
   .callout { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-top: 8px; color: var(--ink); }
   dialog { border: 0; border-radius: 14px; padding: 24px 26px; max-width: 480px; width: calc(100% - 32px); box-shadow: 0 10px 40px rgba(71,84,99,.25); color: var(--ink); font: inherit; }
   dialog::backdrop { background: rgba(71,84,99,.35); }
@@ -99,6 +113,10 @@
     <div id="summary"></div>
     <p class="note">Each follow-up scan is lined up with the first one and measured at the same place on the head, so results can be compared. Scans stay on this computer.</p>
 
+    <h2>Scan quality for helmet manufacture</h2>
+    <div id="quality"></div>
+    <p class="note">A first scan needs the back and sides of the neck 3 cm below the base of the ears, the full face, and no holes or peel. Problems on a follow-up scan are flagged, and a new scan is not required.</p>
+
     <h2>Shape at the measurement level</h2>
     <div id="shape"></div>
     <div class="key" id="shapeKey"></div>
@@ -112,6 +130,7 @@
     <label class="tog helmet-only"><input type="checkbox" id="tHeat" checked> Clearance heatmap on first scan</label>
     <label class="tog"><input type="checkbox" id="tOutline"> Measurement-level outlines</label>
     <label class="tog"><input type="checkbox" id="tLm"> Landmarks</label>
+    <label class="tog"><input type="checkbox" id="tQual" checked> Holes and peel <span class="sw" style="background:#c2187a;margin-left:2px"></span></label>
     <div class="helmet-only">
     <h2>Helmet transparency</h2>
     <input type="range" id="op" min="0" max="100" value="30">

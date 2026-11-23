@@ -31,6 +31,7 @@
   aside h2:first-child { margin-top: 0; }
   label.tog { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
   input[type=range] { width: 100%; accent-color: var(--navy); }
+  [hidden] { display: none !important; }
   .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
   .bar { height: 12px; border-radius: 3px; margin: 4px 0 2px; }
   .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
@@ -96,10 +97,11 @@
     <p class="note" id="measNote"></p>
 
     <h2>Display</h2>
-    <label class="tog"><input type="checkbox" id="tHelmet" checked> Helmet inner surface</label>
-    <label class="tog"><input type="checkbox" id="tHeat" checked> Clearance heatmap on first scan</label>
+    <label class="tog helmet-only"><input type="checkbox" id="tHelmet" checked> Helmet inner surface</label>
+    <label class="tog helmet-only"><input type="checkbox" id="tHeat" checked> Clearance heatmap on first scan</label>
     <label class="tog"><input type="checkbox" id="tOutline"> Measurement-level outlines</label>
     <label class="tog"><input type="checkbox" id="tLm"> Landmarks</label>
+    <div class="helmet-only">
     <h2>Helmet transparency</h2>
     <input type="range" id="op" min="0" max="100" value="30">
     <div class="row"><span>See-through</span><span>Solid</span></div>
@@ -109,9 +111,10 @@
     <div class="ticks"><span>&minus;3 mm</span><span>0</span><span>3</span><span>6</span><span>10 mm</span></div>
     <table id="bands" style="margin-top:6px"></table>
     <p class="note" id="clearNote"></p>
+    </div>
 
     <h2>Notes for the reviewer</h2>
-    <div class="callout" id="alignNote"></div>
+    <div class="callout helmet-only" id="alignNote"></div>
     <div class="callout">Landmarks on the first scan (sellion, both tragions and both ear tops) are provisional and have not been confirmed by a clinician. The ear tops were found from the scan shape. All measurements are recalculated from them.</div>
   </aside>
 </main>

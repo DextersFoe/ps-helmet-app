@@ -138,6 +138,20 @@ export function familyReport(input: FamilyReportInput): void {
   }
   y = text('A cephalic ratio under 75% means the head is long and narrow; your clinician will talk this through with you if it applies.', M, y + 1, 8.5, 'normal', MUTED) + 6;
 
+  // Usual approach for each level, from the Printed Symmetry clinician reference.
+  y = text('What the levels usually mean', M, y, 11.5, 'bold', INK) + 1;
+  const usual: [string, string][] = [
+    ['Typical range', 'No treatment is needed.'],
+    ['Mild or moderate', 'Changing your baby’s position (repositioning) and plenty of supervised tummy time come first. Babies under 5 months are usually checked again after a month. A helmet is an option if you choose it. When the width-to-length level is moderate, a helmet is usually recommended, depending on age and history.'],
+    ['Severe', 'For asymmetry: repositioning, with a helmet if you choose it. For width to length: a helmet with repositioning is recommended.'],
+    ['Very severe', 'A helmet with repositioning is recommended.'],
+  ];
+  for (const [lvl, what] of usual) {
+    text(lvl, M, y + 1, 9.5, 'bold', INK);
+    y = text(what, M + 36, y + 1, 9.5, 'normal', INK, CW - 36) + 1.5;
+  }
+  y = text('Age matters: the head changes shape fastest in the first months, so earlier treatment usually works faster. Your clinician will talk through what suits your baby.', M, y + 1, 8.5, 'normal', MUTED) + 6;
+
   y = text('Why the head is measured again', M, y, 11.5, 'bold', INK) + 0.5;
   y = text('Repeat scans show how the head is growing and changing shape. Head size is checked first: when the head grows, there is room for the shape to improve. Each scan is measured at the same place on the head so the results can be compared fairly.', M, y, 10) + 6;
 

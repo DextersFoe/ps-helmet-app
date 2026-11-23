@@ -16,11 +16,12 @@ interface Part { pos: string; idx: string }
 interface CaseData {
   caseId: string;
   baselineDate: string;
-  head: Part & { clr: string };
+  /** Clearance to the helmet per vertex, 0.01 mm (only with a helmet). */
+  head: Part & { clr?: string };
   helmet?: Part;
   landmarks: Landmarks;
-  stats: { shares: { label: string; lo: number; hi: number; pct: number }[]; coveredAreaCm2: number; median: number; p95: number };
-  alignNote: string;
+  stats?: { shares: { label: string; lo: number; hi: number; pct: number }[]; coveredAreaCm2: number; median: number; p95: number };
+  alignNote?: string;
 }
 interface Scan {
   id: number;
@@ -93,7 +94,7 @@ function geometry(pos: Float32Array, idx: Uint16Array) {
 
 const headPos = positions(CASE.head), headIdx = decode(CASE.head.idx, Uint16Array);
 const headGeo = geometry(headPos, headIdx);
-const clr = decode(CASE.head.clr, Int16Array);
+const clr = CASE.head.clr ? decode(CASE.head.clr, Int16Array) : new Int16Array(headPos.length / 3).fill(-32768);
 const heat = new Float32Array(clr.length * 3), plain = new Float32Array(clr.length * 3);
 for (let i = 0; i < clr.length; i++) {
   const c = clr[i] === -32768 ? NEUTRAL : colour(clr[i]! / 100);
@@ -289,10 +290,11 @@ function renderMeasurements() {
     row('Ear shift (mm)', (m, i) => (isHelmet(i) ? '–' : `${f1(Math.abs(m.earShiftMm))}<span class="lvl">${m.earForward} forward</span>`)) +
     row('Level (mm)', (m) => f1(m.planeHeight));
   $('measNote').textContent = `Measured at the level of largest circumference on the first scan, ${f1(baseM.planeHeight)} mm above the plane through sellion and the ear tops (levelled side to side). ` +
-    'Follow-up scans are measured at the same place on the head, scaled with growth. The helmet is cut at the first scan’s level.';
+    'Follow-up scans are measured at the same place on the head, scaled with growth.' + (helmetM ? ' The helmet is cut at the first scan’s level.' : '');
 }
 
 function renderClearance() {
+  if (!CASE.stats) return;
   $('bar').style.background = 'linear-gradient(90deg,' + STOPS.map(([v, c]) => `rgb(${c.map(Math.round).join(',')}) ${(((v + 3) / 13) * 100).toFixed(1)}%`).join(',') + ')';
   const short = ['Pressure, over 1 mm', 'Contact, within 1 mm', 'Gap 1 to 3 mm', 'Gap 3 to 5 mm', 'Gap 5 to 8 mm', 'Gap over 8 mm'];
   $('bands').innerHTML = CASE.stats.shares.map((b, i) => {
@@ -300,7 +302,7 @@ function renderClearance() {
     return `<tr><td><span class="sw" style="background:rgb(${colour(mid).map(Math.round).join(',')})"></span>${short[i] ?? b.label}</td><td>${b.pct.toFixed(1)}%</td></tr>`;
   }).join('');
   $('clearNote').textContent = `Share of the first scan's surface under the helmet (${CASE.stats.coveredAreaCm2} cm²). Median gap ${CASE.stats.median} mm.`;
-  $('alignNote').textContent = CASE.alignNote;
+  $('alignNote').textContent = CASE.alignNote ?? '';
 }
 
 function applyDisplay() {
@@ -327,7 +329,12 @@ function refresh() {
 }
 ['tHelmet', 'tHeat', 'tOutline', 'tLm'].forEach((id) => ($(id).onchange = () => { applyDisplay(); renderShape(); rebuildOutlines3d(); applyDisplay(); }));
 $('op').oninput = applyDisplay;
-if (!CASE.helmet) { $<HTMLInputElement>('tHelmet').checked = false; $<HTMLInputElement>('tHelmet').disabled = true; }
+if (!CASE.helmet) {
+  // Assessment before any helmet is made: hide the helmet and clearance controls.
+  $<HTMLInputElement>('tHelmet').checked = false;
+  $<HTMLInputElement>('tHeat').checked = false;
+  document.querySelectorAll<HTMLElement>('.helmet-only').forEach((e) => (e.hidden = true));
+}
 
 // ---------- follow-up scans ----------
 const busy = (on: boolean, msg = '') => { $('busy').classList.toggle('on', on); $('busyText').textContent = msg; };

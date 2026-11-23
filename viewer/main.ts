@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { measureHead, parseStl, type Landmarks, type Measurements, type Mesh } from '../src/measure/index.js';
+import { findEarTops, measureHead, parseStl, type Landmarks, type Measurements, type Mesh } from '../src/measure/index.js';
 import { measureFollowUp } from '../src/measure/followup.js';
 import type { Similarity } from '../src/align/register.js';
 import type { Vec2, Vec3 } from '../src/measure/vec.js';
@@ -133,11 +133,14 @@ if (CASE.helmet) {
 
 // ---------- measurements of the first scan and the helmet ----------
 const baseMesh = toEngineMesh(headPos, headIdx);
-const baseM = measureHead(baseMesh, CASE.landmarks);
-if (helmetMesh) helmetM = measureHead(helmetMesh, CASE.landmarks, { planeHeight: baseM.planeHeight });
+// Ear tops are proposed from the scan shape when the case does not include them.
+const LM: Landmarks = CASE.landmarks.earTopLeft && CASE.landmarks.earTopRight
+  ? CASE.landmarks : { ...CASE.landmarks, ...findEarTops(baseMesh, CASE.landmarks) };
+const baseM = measureHead(baseMesh, LM);
+if (helmetMesh) helmetM = measureHead(helmetMesh, LM, { planeHeight: baseM.planeHeight });
 
 const scans: Scan[] = [{
-  id: 0, label: 'First scan', date: CASE.baselineDate, mesh: baseMesh, landmarks: CASE.landmarks, m: baseM,
+  id: 0, label: 'First scan', date: CASE.baselineDate, mesh: baseMesh, landmarks: LM, m: baseM,
   colour: FIRST_COLOUR, object: headObj, visible: true,
 }];
 let nextId = 1;
@@ -188,7 +191,7 @@ function rebuildOutlines3d() {
   for (const s of scans) if (s.visible) add(s.m, s.colour, s.transform ? placeMatrix(s.transform) : undefined);
   if (helmetM && helmetObj?.visible) add(helmetM, HELMET_COLOUR);
   marks.clear();
-  for (const p of Object.values(CASE.landmarks)) {
+  for (const p of Object.values(LM)) {
     const s = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0x1f2a3d, depthTest: false }));
     s.position.set(...(p as [number, number, number]));
     s.renderOrder = 6;
@@ -285,7 +288,7 @@ function renderMeasurements() {
     row('Diagonal, front-right (mm)', (m) => f1(m.diagonalFrontRightMm)) +
     row('Ear shift (mm)', (m, i) => (isHelmet(i) ? '–' : `${f1(Math.abs(m.earShiftMm))}<span class="lvl">${m.earForward} forward</span>`)) +
     row('Level (mm)', (m) => f1(m.planeHeight));
-  $('measNote').textContent = `Measured at the level of largest circumference on the first scan, ${f1(baseM.planeHeight)} mm above the plane through sellion and both tragions. ` +
+  $('measNote').textContent = `Measured at the level of largest circumference on the first scan, ${f1(baseM.planeHeight)} mm above the plane through sellion and the ear tops (levelled side to side). ` +
     'Follow-up scans are measured at the same place on the head, scaled with growth. The helmet is cut at the first scan’s level.';
 }
 
@@ -338,7 +341,7 @@ $<HTMLInputElement>('file').onchange = async (e) => {
   await new Promise((r) => setTimeout(r, 50));
   try {
     const mesh = parseStl(new Uint8Array(await file.arrayBuffer()));
-    const result = measureFollowUp({ mesh: baseMesh, landmarks: CASE.landmarks, measurements: baseM }, mesh);
+    const result = measureFollowUp({ mesh: baseMesh, landmarks: LM, measurements: baseM }, mesh);
     const colour = SCAN_COLOURS[(scans.length - 1) % SCAN_COLOURS.length]!;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(mesh.triangles), 3));

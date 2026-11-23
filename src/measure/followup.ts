@@ -9,7 +9,7 @@
  *    the head as the head grows. The level in mm is reported too.
  */
 import { applySimilarity, invertSimilarity, registerScans, type Similarity } from '../align/register.js';
-import { buildFrame, type Landmarks } from './frame.js';
+import { buildFrame, tragionFrame, type Landmarks } from './frame.js';
 import { measureHead, type Measurements } from './measure.js';
 import { frameMesh } from './slice.js';
 import type { Mesh } from './stl.js';
@@ -66,7 +66,7 @@ function snap(mesh: Mesh, p: Vec3): Vec3 {
 }
 
 export function measureFollowUp(baseline: Baseline, followUp: Mesh, opts: { landmarks?: Landmarks } = {}): FollowUpResult {
-  const frame0 = buildFrame(baseline.landmarks);
+  const frame0 = tragionFrame(baseline.landmarks);
   const up0 = frame0.up, o0 = frame0.origin;
   // Baseline cranial vault: more than 10 mm above the reference plane.
   const above = (p: Vec3) => (p[0] - o0[0]) * up0[0] + (p[1] - o0[1]) * up0[1] + (p[2] - o0[2]) * up0[2] > 10;
@@ -78,11 +78,10 @@ export function measureFollowUp(baseline: Baseline, followUp: Mesh, opts: { land
   const moving = surfaceSamples(followUp, (p) => p[2] > zMin + 0.45 * (zMax - zMin)).points;
   const reg = registerScans(moving, fixed.points, { overlap: above, fixedNormals: fixed.normals });
 
-  const landmarks: Landmarks = opts.landmarks ?? {
-    sellion: snap(followUp, invertSimilarity(reg.transform, baseline.landmarks.sellion)),
-    tragionLeft: snap(followUp, invertSimilarity(reg.transform, baseline.landmarks.tragionLeft)),
-    tragionRight: snap(followUp, invertSimilarity(reg.transform, baseline.landmarks.tragionRight)),
-  };
+  const carry = (p: Vec3) => snap(followUp, invertSimilarity(reg.transform, p));
+  const landmarks: Landmarks = opts.landmarks ?? (Object.fromEntries(
+    Object.entries(baseline.landmarks).map(([k, p]) => [k, carry(p as Vec3)]),
+  ) as unknown as Landmarks);
   const fraction = levelFraction(baseline.mesh, baseline.landmarks, baseline.measurements.planeHeight);
   const maxUp = frameMesh(followUp, buildFrame(landmarks)).maxUp;
   const measurements = measureHead(followUp, landmarks, { planeHeight: fraction * maxUp });
